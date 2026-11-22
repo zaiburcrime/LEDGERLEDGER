@@ -2351,15 +2351,12 @@ public class FinancialTracker extends JFrame {
         applyTheme(this);
         if (sidebar != null) {
             sidebar.setBackground(darkMode ? new Color(22, 24, 30) : new Color(30, 32, 40));
-            for (java.awt.Component c : sidebar.getComponents()) {
-                if (c instanceof JButton) {
-                    JButton b = (JButton) c;
-                    if (!b.getBackground().equals(new Color(55, 60, 75))) {
-                        b.setBackground(darkMode ? new Color(22, 24, 30) : new Color(30, 32, 40));
-                    }
-                }
-            }
         }
+        // Restore the colored dashboard numbers
+        if (allowanceValueLabel != null) allowanceValueLabel.setForeground(ACCENT);
+        if (spentValueLabel != null) spentValueLabel.setForeground(RED);
+        if (leftValueLabel != null) leftValueLabel.setForeground(GREEN);
+        if (perDayValueLabel != null) perDayValueLabel.setForeground(new Color(2, 132, 199));
         refreshAll();
         repaint();
     }
@@ -2367,55 +2364,54 @@ public class FinancialTracker extends JFrame {
     /** Walk the component tree and apply current theme colors. */
     private void applyTheme(java.awt.Component root) {
         if (root == null) return;
-        Color bg = darkMode ? BG : BG;
-        Color card = darkMode ? CARD : CARD;
-        Color ink = darkMode ? INK : INK;
-        Color muted = darkMode ? MUTED : MUTED;
 
         if (root instanceof JPanel) {
             JPanel p = (JPanel) root;
-            // Sidebar stays dark; everything else follows theme
             if (p != sidebar) {
-                if (p.getBackground() != null && !p.getBackground().equals(new Color(30, 32, 40))
-                        && !p.getBackground().equals(new Color(22, 24, 30))) {
-                    // Use card color for white-ish panels, bg for the rest
-                    Color current = p.getBackground();
-                    if (current.equals(Color.WHITE) || current.getRed() > 200) {
-                        p.setBackground(card);
+                Color current = p.getBackground();
+                if (current != null
+                        && !current.equals(new Color(30, 32, 40))
+                        && !current.equals(new Color(22, 24, 30))) {
+                    if (current.equals(Color.WHITE) || current.getRed() > 180) {
+                        p.setBackground(CARD);
                     } else {
-                        p.setBackground(bg);
+                        p.setBackground(BG);
                     }
                 }
             }
         } else if (root instanceof JLabel) {
             JLabel l = (JLabel) root;
-            if (l.getForeground() != null && l.getForeground().getRed() < 100) {
-                l.setForeground(ink);
+            // Keep special colors (accent, red, green, blue) only if they are clearly colored
+            Color fg = l.getForeground();
+            boolean special = fg != null && (
+                fg.equals(ACCENT) || fg.equals(RED) || fg.equals(GREEN)
+                || fg.equals(new Color(2, 132, 199)));
+            if (!special) {
+                l.setForeground(INK);
             }
         } else if (root instanceof JTextField || root instanceof JTextArea) {
             javax.swing.text.JTextComponent tc = (javax.swing.text.JTextComponent) root;
-            tc.setBackground(card);
-            tc.setForeground(ink);
-            tc.setCaretColor(ink);
+            tc.setBackground(CARD);
+            tc.setForeground(INK);
+            tc.setCaretColor(INK);
         } else if (root instanceof JTable) {
             JTable t = (JTable) root;
-            t.setBackground(card);
-            t.setForeground(ink);
+            t.setBackground(CARD);
+            t.setForeground(INK);
             t.setGridColor(BORDER);
             if (t.getTableHeader() != null) {
                 t.getTableHeader().setBackground(darkMode ? new Color(50, 54, 64) : new Color(240, 242, 246));
-                t.getTableHeader().setForeground(ink);
+                t.getTableHeader().setForeground(INK);
             }
         } else if (root instanceof JComboBox) {
-            root.setBackground(card);
-            root.setForeground(ink);
+            root.setBackground(CARD);
+            root.setForeground(INK);
         } else if (root instanceof JButton) {
             JButton b = (JButton) root;
-            if (b.getBackground() != null && b.getBackground().equals(ACCENT)) {
-                // keep accent buttons
-            } else if (b.getParent() != sidebar) {
-                b.setBackground(darkMode ? new Color(55, 60, 75) : null);
-                b.setForeground(ink);
+            if (b.getParent() != sidebar) {
+                if (b.getBackground() == null || !b.getBackground().equals(ACCENT)) {
+                    b.setForeground(INK);
+                }
             }
         }
 
