@@ -2365,6 +2365,9 @@ public class FinancialTracker extends JFrame {
     private void applyTheme(java.awt.Component root) {
         if (root == null) return;
 
+        Color fieldBg = darkMode ? new Color(50, 54, 64) : Color.WHITE;
+        Color fieldFg = darkMode ? new Color(230, 232, 240) : new Color(15, 23, 42);
+
         if (root instanceof JPanel) {
             JPanel p = (JPanel) root;
             if (p != sidebar) {
@@ -2372,47 +2375,57 @@ public class FinancialTracker extends JFrame {
                 if (current != null
                         && !current.equals(new Color(30, 32, 40))
                         && !current.equals(new Color(22, 24, 30))) {
-                    if (current.equals(Color.WHITE) || current.getRed() > 180) {
-                        p.setBackground(CARD);
-                    } else {
-                        p.setBackground(BG);
-                    }
+                    p.setBackground(CARD);
+                    p.setOpaque(true);
                 }
             }
         } else if (root instanceof JLabel) {
             JLabel l = (JLabel) root;
-            // Keep special colors (accent, red, green, blue) only if they are clearly colored
             Color fg = l.getForeground();
             boolean special = fg != null && (
                 fg.equals(ACCENT) || fg.equals(RED) || fg.equals(GREEN)
                 || fg.equals(new Color(2, 132, 199)));
             if (!special) {
-                l.setForeground(INK);
+                l.setForeground(fieldFg);
             }
-        } else if (root instanceof JTextField || root instanceof JTextArea) {
+        } else if (root instanceof JTextField || root instanceof JTextArea || root instanceof JPasswordField) {
             javax.swing.text.JTextComponent tc = (javax.swing.text.JTextComponent) root;
-            tc.setBackground(CARD);
-            tc.setForeground(INK);
-            tc.setCaretColor(INK);
+            tc.setBackground(fieldBg);
+            tc.setForeground(fieldFg);
+            tc.setCaretColor(fieldFg);
+            tc.setOpaque(true);
+        } else if (root instanceof JSpinner) {
+            JSpinner sp = (JSpinner) root;
+            sp.setBackground(fieldBg);
+            sp.setForeground(fieldFg);
+            if (sp.getEditor() instanceof JSpinner.DefaultEditor) {
+                JTextField tf = ((JSpinner.DefaultEditor) sp.getEditor()).getTextField();
+                tf.setBackground(fieldBg);
+                tf.setForeground(fieldFg);
+                tf.setCaretColor(fieldFg);
+            }
         } else if (root instanceof JTable) {
             JTable t = (JTable) root;
             t.setBackground(CARD);
-            t.setForeground(INK);
+            t.setForeground(fieldFg);
             t.setGridColor(BORDER);
+            t.setSelectionBackground(darkMode ? new Color(70, 75, 90) : new Color(200, 210, 230));
+            t.setSelectionForeground(fieldFg);
             if (t.getTableHeader() != null) {
                 t.getTableHeader().setBackground(darkMode ? new Color(50, 54, 64) : new Color(240, 242, 246));
-                t.getTableHeader().setForeground(INK);
+                t.getTableHeader().setForeground(fieldFg);
             }
         } else if (root instanceof JComboBox) {
-            root.setBackground(CARD);
-            root.setForeground(INK);
+            JComboBox<?> cb = (JComboBox<?>) root;
+            cb.setBackground(fieldBg);
+            cb.setForeground(fieldFg);
         } else if (root instanceof JButton) {
             JButton b = (JButton) root;
-            if (b.getParent() != sidebar) {
-                if (b.getBackground() == null || !b.getBackground().equals(ACCENT)) {
-                    b.setForeground(INK);
-                }
+            if (b.getParent() != sidebar && (b.getBackground() == null || !ACCENT.equals(b.getBackground()))) {
+                b.setForeground(fieldFg);
             }
+        } else if (root instanceof JCheckBox) {
+            ((JCheckBox) root).setForeground(fieldFg);
         }
 
         if (root instanceof java.awt.Container) {
