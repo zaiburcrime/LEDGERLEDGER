@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "FinancialTracker",
+      "request": "launch",
+      "mainClass": "FinancialTracker",
+      "projectName": "ewan ko na_481b0fab"
+    },
+    {
+      "type": "java",
+      "name": "Run Ledger",
+      "request": "launch",
+      "mainClass": "FinancialTracker",
+      "projectName": "Ledger"
+    }
+  ]
+}
