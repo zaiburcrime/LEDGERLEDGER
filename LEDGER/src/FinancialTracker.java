@@ -2192,7 +2192,7 @@ public class FinancialTracker extends JFrame {
     private JLabel smallLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(new Font("Helvetica Neue", Font.BOLD, 10));
-        label.setForeground(MUTED);
+        label.setForeground(darkMode ? new Color(200, 205, 215) : new Color(70, 80, 100));
         return label;
     }
 
@@ -2339,27 +2339,54 @@ public class FinancialTracker extends JFrame {
             BG = new Color(24, 26, 32);
             CARD = new Color(38, 41, 50);
             INK = new Color(230, 232, 240);
-            MUTED = new Color(160, 170, 190);
+            MUTED = new Color(180, 185, 195);
             BORDER = new Color(55, 60, 70);
+            UIManager.put("nimbusLightBackground", CARD);
+            UIManager.put("control", BG);
+            UIManager.put("info", BG);
+            UIManager.put("text", INK);
+            UIManager.put("nimbusBlueGrey", BORDER);
+            UIManager.put("TextField.background", new Color(50, 54, 64));
+            UIManager.put("TextField.foreground", INK);
+            UIManager.put("ComboBox.background", new Color(50, 54, 64));
+            UIManager.put("ComboBox.foreground", INK);
+            UIManager.put("Label.foreground", INK);
         } else {
             BG = new Color(244, 246, 250);
             CARD = Color.WHITE;
             INK = new Color(15, 23, 42);
             MUTED = new Color(100, 116, 139);
             BORDER = new Color(226, 232, 240);
+            UIManager.put("nimbusLightBackground", Color.WHITE);
+            UIManager.put("control", BG);
+            UIManager.put("info", BG);
+            UIManager.put("text", INK);
+            UIManager.put("nimbusBlueGrey", BORDER);
+            UIManager.put("TextField.background", Color.WHITE);
+            UIManager.put("TextField.foreground", INK);
+            UIManager.put("ComboBox.background", Color.WHITE);
+            UIManager.put("ComboBox.foreground", INK);
+            UIManager.put("Label.foreground", INK);
         }
+        SwingUtilities.updateComponentTreeUI(this);
         applyTheme(this);
         if (sidebar != null) {
             sidebar.setBackground(darkMode ? new Color(22, 24, 30) : new Color(30, 32, 40));
             for (java.awt.Component c : sidebar.getComponents()) {
                 if (c instanceof JButton) {
                     JButton b = (JButton) c;
-                    if (!b.getBackground().equals(new Color(55, 60, 75))) {
-                        b.setBackground(darkMode ? new Color(22, 24, 30) : new Color(30, 32, 40));
-                    }
+                    b.setBackground(darkMode ? new Color(22, 24, 30) : new Color(30, 32, 40));
+                    b.setForeground(new Color(200, 205, 215));
+                } else if (c instanceof JLabel) {
+                    ((JLabel) c).setForeground(Color.WHITE);
                 }
             }
         }
+        if (allowanceValueLabel != null) allowanceValueLabel.setForeground(ACCENT);
+        if (spentValueLabel != null) spentValueLabel.setForeground(RED);
+        if (leftValueLabel != null) leftValueLabel.setForeground(GREEN);
+        if (perDayValueLabel != null) perDayValueLabel.setForeground(new Color(2, 132, 199));
+        contentPane.setBackground(BG);
         refreshAll();
         repaint();
     }
@@ -2367,56 +2394,63 @@ public class FinancialTracker extends JFrame {
     /** Walk the component tree and apply current theme colors. */
     private void applyTheme(java.awt.Component root) {
         if (root == null) return;
-        Color bg = darkMode ? BG : BG;
-        Color card = darkMode ? CARD : CARD;
-        Color ink = darkMode ? INK : INK;
-        Color muted = darkMode ? MUTED : MUTED;
+
+        Color fieldBg = darkMode ? new Color(50, 54, 64) : Color.WHITE;
+        Color fieldFg = darkMode ? new Color(230, 232, 240) : new Color(15, 23, 42);
 
         if (root instanceof JPanel) {
             JPanel p = (JPanel) root;
-            // Sidebar stays dark; everything else follows theme
             if (p != sidebar) {
-                if (p.getBackground() != null && !p.getBackground().equals(new Color(30, 32, 40))
-                        && !p.getBackground().equals(new Color(22, 24, 30))) {
-                    // Use card color for white-ish panels, bg for the rest
-                    Color current = p.getBackground();
-                    if (current.equals(Color.WHITE) || current.getRed() > 200) {
-                        p.setBackground(card);
-                    } else {
-                        p.setBackground(bg);
-                    }
+                Color current = p.getBackground();
+                if (current != null
+                        && !current.equals(new Color(30, 32, 40))
+                        && !current.equals(new Color(22, 24, 30))) {
+                    p.setBackground(CARD);
+                    p.setOpaque(true);
                 }
             }
         } else if (root instanceof JLabel) {
             JLabel l = (JLabel) root;
-            if (l.getForeground() != null && l.getForeground().getRed() < 100) {
-                l.setForeground(ink);
-            }
-        } else if (root instanceof JTextField || root instanceof JTextArea) {
+            // Always set readable color; dashboard numbers get restored after
+            l.setForeground(fieldFg);
+        } else if (root instanceof JTextField || root instanceof JTextArea || root instanceof JPasswordField) {
             javax.swing.text.JTextComponent tc = (javax.swing.text.JTextComponent) root;
-            tc.setBackground(card);
-            tc.setForeground(ink);
-            tc.setCaretColor(ink);
+            tc.setBackground(fieldBg);
+            tc.setForeground(fieldFg);
+            tc.setCaretColor(fieldFg);
+            tc.setOpaque(true);
+        } else if (root instanceof JSpinner) {
+            JSpinner sp = (JSpinner) root;
+            sp.setBackground(fieldBg);
+            sp.setForeground(fieldFg);
+            if (sp.getEditor() instanceof JSpinner.DefaultEditor) {
+                JTextField tf = ((JSpinner.DefaultEditor) sp.getEditor()).getTextField();
+                tf.setBackground(fieldBg);
+                tf.setForeground(fieldFg);
+                tf.setCaretColor(fieldFg);
+            }
         } else if (root instanceof JTable) {
             JTable t = (JTable) root;
-            t.setBackground(card);
-            t.setForeground(ink);
+            t.setBackground(CARD);
+            t.setForeground(fieldFg);
             t.setGridColor(BORDER);
+            t.setSelectionBackground(darkMode ? new Color(70, 75, 90) : new Color(200, 210, 230));
+            t.setSelectionForeground(fieldFg);
             if (t.getTableHeader() != null) {
                 t.getTableHeader().setBackground(darkMode ? new Color(50, 54, 64) : new Color(240, 242, 246));
-                t.getTableHeader().setForeground(ink);
+                t.getTableHeader().setForeground(fieldFg);
             }
         } else if (root instanceof JComboBox) {
-            root.setBackground(card);
-            root.setForeground(ink);
+            JComboBox<?> cb = (JComboBox<?>) root;
+            cb.setBackground(fieldBg);
+            cb.setForeground(fieldFg);
         } else if (root instanceof JButton) {
             JButton b = (JButton) root;
-            if (b.getBackground() != null && b.getBackground().equals(ACCENT)) {
-                // keep accent buttons
-            } else if (b.getParent() != sidebar) {
-                b.setBackground(darkMode ? new Color(55, 60, 75) : null);
-                b.setForeground(ink);
+            if (b.getParent() != sidebar && (b.getBackground() == null || !ACCENT.equals(b.getBackground()))) {
+                b.setForeground(fieldFg);
             }
+        } else if (root instanceof JCheckBox) {
+            ((JCheckBox) root).setForeground(fieldFg);
         }
 
         if (root instanceof java.awt.Container) {
