@@ -236,6 +236,8 @@ public class FinancialTracker extends JFrame {
     private JTable planTable;
     private DefaultTableModel planTableModel;
     private JLabel monthInfoLabel;
+    private JLabel totalBudgetValueLabel;
+    private JLabel budgetBreakdownLabel;
 
     // Reports (the graph)
     private JPanel categoryBarsPanel;
@@ -1238,18 +1240,48 @@ public class FinancialTracker extends JFrame {
         gbc.gridy = 4;
         form.add(monthInfoLabel, gbc);
 
-        gbc.gridy = 1;
+        gbc.gridy = 0;
+        gbc.gridheight = 5;
         gbc.gridx = 3;
         gbc.gridwidth = 1;
         gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        JPanel spacer = new JPanel();
-        spacer.setOpaque(false);
-        form.add(spacer, gbc);
+        gbc.anchor = GridBagConstraints.NORTHEAST;
+        gbc.fill = GridBagConstraints.NONE;
+        form.add(createTotalBudgetPanel(), gbc);
 
         panel.add(form, BorderLayout.NORTH);
         panel.add(createPlanPanel(), BorderLayout.CENTER);
         return panel;
+    }
+
+    private JPanel createTotalBudgetPanel() {
+        JPanel box = new JPanel();
+        box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
+        box.setBackground(BG);
+        box.setBorder(new javax.swing.border.CompoundBorder(
+                new LineBorder(BORDER, 1),
+                new EmptyBorder(10, 14, 10, 14)));
+
+        JLabel title = smallLabel("TOTAL MONTHLY BUDGET");
+        title.setAlignmentX(JLabel.LEFT_ALIGNMENT);
+
+        totalBudgetValueLabel = new JLabel("₱0.00");
+        totalBudgetValueLabel.setFont(BIG_FONT);
+        totalBudgetValueLabel.setForeground(ACCENT);
+        totalBudgetValueLabel.putClientProperty("keepColor", Boolean.TRUE);
+        totalBudgetValueLabel.setAlignmentX(JLabel.LEFT_ALIGNMENT);
+
+        budgetBreakdownLabel = new JLabel("Allowance: ₱0.00  +  Extra income: ₱0.00");
+        budgetBreakdownLabel.setFont(SMALL_FONT);
+        budgetBreakdownLabel.setForeground(MUTED);
+        budgetBreakdownLabel.setAlignmentX(JLabel.LEFT_ALIGNMENT);
+
+        box.add(title);
+        box.add(Box.createVerticalStrut(4));
+        box.add(totalBudgetValueLabel);
+        box.add(Box.createVerticalStrut(4));
+        box.add(budgetBreakdownLabel);
+        return box;
     }
 
     /** Planned budget per category, kept in a HashMap. */
@@ -2026,6 +2058,7 @@ public class FinancialTracker extends JFrame {
         updateReportMonths();
         rebuildReports();
         updateAllowanceInfo();
+        updateTotalBudgetCard();
 
         if (undoButton != null) {
             undoButton.setEnabled(!deleted.isEmpty());
@@ -2146,6 +2179,20 @@ public class FinancialTracker extends JFrame {
         String monthName = month.atDay(1).format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH));
         monthInfoLabel.setText(monthName + "  -  " + daysInMonth + " days in the month  -  "
                 + daysLeft + " day(s) left");
+    }
+
+    private void updateTotalBudgetCard() {
+        if (totalBudgetValueLabel == null || budgetBreakdownLabel == null) {
+            return;
+        }
+        YearMonth month = YearMonth.now();
+        double baseAllowance = data.allowance(month);
+        double extra = data.extraIncome(month);
+        double totalBudget = baseAllowance + extra;
+
+        totalBudgetValueLabel.setText("₱" + MONEY.format(totalBudget));
+        budgetBreakdownLabel.setText("Allowance: ₱" + MONEY.format(baseAllowance)
+                + "  +  Extra income: ₱" + MONEY.format(extra));
     }
 
     // ------------------------------------------------------------------
