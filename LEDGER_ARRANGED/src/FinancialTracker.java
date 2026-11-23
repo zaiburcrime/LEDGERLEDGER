@@ -68,31 +68,31 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 /**
- * Ledger - a simple student financial tracker.
+- Ledger - a simple student financial tracker.
  *
- * <p>This program was written for a Data Structures class, so the data is kept in
- * real data structures instead of plain variables. The three used here are:</p>
+- <p>This program was written for a Data Structures class, so the data is kept in
+- real data structures instead of plain variables. The three used here are:</p>
  *
- * <ul>
- *   <li><b>ArrayList</b> - the list of expenses, the list of goals, the list of
- *       categories and the list of user accounts. It works like an array that can
- *       grow and shrink.</li>
- *   <li><b>HashMap</b> - the planned budget. The key is the category name and the
- *       value is the amount planned for that category, so we can look a category
- *       up in one step instead of searching the whole list.</li>
- *   <li><b>Stack</b> - the recently deleted expenses. When you delete a row it is
- *       pushed on the stack, and "Undo last delete" pops it back. Last in, first out.</li>
- * </ul>
+- <ul>
+-   <li><b>ArrayList</b> - the list of expenses, the list of goals, the list of
+-       categories and the list of user accounts. It works like an array that can
+-       grow and shrink.</li>
+-   <li><b>HashMap</b> - the planned budget. The key is the category name and the
+-       value is the amount planned for that category, so we can look a category
+-       up in one step instead of searching the whole list.</li>
+-   <li><b>Stack</b> - the recently deleted expenses. When you delete a row it is
+-       pushed on the stack, and "Undo last delete" pops it back. Last in, first out.</li>
+- </ul>
  *
- * <p>Sorting is a bubble sort in {@link Expense#bubbleSort(java.util.ArrayList, int)}.
- * Search is a linear check in {@link Expense#matches(Expense, String)}.</p>
+- <p>Sorting is a bubble sort in {@link Expense#bubbleSort(java.util.ArrayList, int)}.
+- Search is a linear check in {@link Expense#matches(Expense, String)}.</p>
  *
- * <p>The screens are built in the same style Eclipse WindowBuilder uses: the frame
- * has a {@code contentPane}, the components are fields, and the UI is assembled in
- * {@code createContents()} and the {@code create...Panel()} methods.</p>
+- <p>The screens are built in the same style Eclipse WindowBuilder uses: the frame
+- has a {@code contentPane}, the components are fields, and the UI is assembled in
+- {@code createContents()} and the {@code create...Panel()} methods.</p>
  *
- * <p>Log in with the demo account <b>student / 1234</b> (or create your own account
- * on the login window).</p>
+- <p>Log in with the demo account <b>student / 1234</b> (or create your own account
+- on the login window).</p>
  */
 public class FinancialTracker extends JFrame {
 
@@ -194,6 +194,7 @@ public class FinancialTracker extends JFrame {
     private JComboBox<String> categoryBox;
     private JSpinner dateSpinner;
     private LocalDate dateFloor = LocalDate.now();
+    private YearMonth dateMonth = YearMonth.now();
     private javax.swing.Timer dateRefreshTimer;
     private JButton addExpenseButton;
     private JButton saveExpenseButton;
@@ -325,7 +326,7 @@ public class FinancialTracker extends JFrame {
         createContents();
         // If the tracker stays open overnight, advance the minimum date automatically.
         dateRefreshTimer = new javax.swing.Timer(30000, e -> {
-            if (!LocalDate.now().equals(dateFloor)) {
+            if (!YearMonth.now().equals(dateMonth) || !LocalDate.now().equals(dateFloor)) {
                 refreshDateFloor();
                 refreshCurrentMonth();
                 refreshAll();
@@ -710,10 +711,13 @@ public class FinancialTracker extends JFrame {
         categoryBox.setFont(LABEL_FONT);
         fillCategoryBox();
 
-        dateSpinner = new JSpinner(expenseDateModel(LocalDate.now()));
+        YearMonth currentMonth = YearMonth.now();
+        dateSpinner = new JSpinner(expenseDateModel(LocalDate.now(), currentMonth));
         dateSpinner.setEditor(new JSpinner.DateEditor(dateSpinner, "MM/dd/yyyy"));
         ((JSpinner.DateEditor) dateSpinner.getEditor()).getFormat().setLenient(false);
-        dateSpinner.setToolTipText("Today or a later date. Past dates cannot be used for new expenses.");
+        dateSpinner.setToolTipText("Select any date within the current month ("
+                + currentMonth.atDay(1).format(GOAL_DATE) + " - "
+                + currentMonth.atEndOfMonth().format(GOAL_DATE) + ").");
         dateSpinner.setPreferredSize(new Dimension(140, 28));
         dateSpinner.setFont(LABEL_FONT);
 
@@ -1390,7 +1394,7 @@ public class FinancialTracker extends JFrame {
         descriptionField.setText(expense.description);
         amountField.setText(MONEY.format(expense.amount));
         categoryBox.setSelectedItem(expense.category);
-        configureExpenseDate(expense.date, LocalDate.now());
+        configureExpenseDate(expense.date, YearMonth.now());
 
         addExpenseButton.setVisible(false);
         saveExpenseButton.setVisible(true);
@@ -1566,9 +1570,9 @@ public class FinancialTracker extends JFrame {
     // ------------------------------------------------------------------
 
     /**
-     * Rebuilds the table from the ArrayList.
-     * First we keep only the rows that match the search box, then we sort them,
-     * then we copy them into the table model.
+- Rebuilds the table from the ArrayList.
+- First we keep only the rows that match the search box, then we sort them,
+- then we copy them into the table model.
      */
     private void rebuildExpenseTable() {
         if (expenseTableModel == null) {
@@ -2183,8 +2187,8 @@ public class FinancialTracker extends JFrame {
     }
 
     /**
-     * Copies the category names into both combo boxes.
-     * The two boxes are created at different times, so each one is checked first.
+- Copies the category names into both combo boxes.
+- The two boxes are created at different times, so each one is checked first.
      */
     private void fillCategoryBox() {
         if (categoryBox != null) {
@@ -2210,10 +2214,14 @@ public class FinancialTracker extends JFrame {
         return Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
-    /** Start at today, step one calendar day, and prohibit stepping into the past. */
-    static SpinnerDateModel expenseDateModel(LocalDate today) {
-        Date first = spinnerDate(today);
-        return new SpinnerDateModel(first, first, null, Calendar.DAY_OF_MONTH) {
+    /** Allow dates anywhere in {@code month}, from its 1st day through its last day. */
+    static SpinnerDateModel expenseDateModel(LocalDate initial, YearMonth month) {
+        LocalDate start = month.atDay(1);
+        LocalDate end = month.atEndOfMonth();
+        Date minDate = spinnerDate(start);
+        Date maxDate = spinnerDate(end);
+        LocalDate clampedInitial = clampToMonth(initial == null ? LocalDate.now() : initial, month);
+        return new SpinnerDateModel(spinnerDate(clampedInitial), minDate, maxDate, Calendar.DAY_OF_MONTH) {
             @Override
             public void setCalendarField(int ignored) {
                 super.setCalendarField(Calendar.DAY_OF_MONTH);
@@ -2221,36 +2229,52 @@ public class FinancialTracker extends JFrame {
         };
     }
 
-    static boolean allowedExpenseDate(LocalDate date, LocalDate today) {
-        return date != null && !date.isBefore(today);
+    static LocalDate clampToMonth(LocalDate date, YearMonth month) {
+        LocalDate start = month.atDay(1);
+        LocalDate end = month.atEndOfMonth();
+        if (date.isBefore(start)) return start;
+        if (date.isAfter(end)) return end;
+        return date;
     }
 
-    /** A historical entry keeps its original date when its other details are edited. */
-    private void configureExpenseDate(LocalDate value, LocalDate today) {
+    static boolean allowedExpenseDate(LocalDate date, YearMonth month) {
+        if (date == null || month == null) return false;
+        return YearMonth.from(date).equals(month);
+    }
+
+    private void configureExpenseDate(LocalDate value, YearMonth month) {
+        LocalDate start = month.atDay(1);
+        LocalDate end = month.atEndOfMonth();
         SpinnerDateModel model = (SpinnerDateModel) dateSpinner.getModel();
-        boolean historical = editingExpense != null && editingExpense.date.isBefore(today);
-        model.setStart(spinnerDate(historical ? editingExpense.date : today));
-        LocalDate selected = historical ? editingExpense.date
-                : (allowedExpenseDate(value, today) ? value : today);
+        model.setStart(spinnerDate(start));
+        model.setEnd(spinnerDate(end));
+
+        LocalDate target = value == null ? LocalDate.now() : value;
+        LocalDate selected = allowedExpenseDate(target, month) ? target : clampToMonth(target, month);
         dateSpinner.setValue(spinnerDate(selected));
-        dateSpinner.setEnabled(!historical);
-        ((JSpinner.DateEditor) dateSpinner.getEditor()).getTextField().setEditable(!historical);
-        dateSpinner.setToolTipText(historical ? "Historical expense date is preserved."
-                : "Today or a later date. Past dates cannot be used for new expenses.");
-        dateFloor = today;
+        dateSpinner.setEnabled(true);
+        ((JSpinner.DateEditor) dateSpinner.getEditor()).getTextField().setEditable(true);
+        dateSpinner.setToolTipText("Select any date within the current month ("
+                + start.format(GOAL_DATE) + " - " + end.format(GOAL_DATE) + ").");
+        dateMonth = month;
+        dateFloor = LocalDate.now();
     }
 
     private void resetExpenseDate() {
-        LocalDate today = LocalDate.now();
-        configureExpenseDate(today, today);
+        YearMonth currentMonth = YearMonth.now();
+        LocalDate defaultDate = clampToMonth(LocalDate.now(), currentMonth);
+        configureExpenseDate(defaultDate, currentMonth);
         // Discard even an uncommitted date typed directly into the editor.
-        ((JSpinner.DateEditor) dateSpinner.getEditor()).getTextField().setValue(spinnerDate(today));
+        ((JSpinner.DateEditor) dateSpinner.getEditor()).getTextField().setValue(spinnerDate(defaultDate));
     }
 
     private void refreshDateFloor() {
         if (dateSpinner == null) return;
+        YearMonth currentMonth = YearMonth.now();
         LocalDate today = LocalDate.now();
-        if (!today.equals(dateFloor)) configureExpenseDate(getDateFromSpinner(), today);
+        if (!currentMonth.equals(dateMonth) || !today.equals(dateFloor)) {
+            configureExpenseDate(getDateFromSpinner(), currentMonth);
+        }
     }
 
     /** Reads "1,250.50" or "1250" and returns 0 when it is not a number. */
@@ -2267,16 +2291,19 @@ public class FinancialTracker extends JFrame {
     }
 
     private LocalDate validatedExpenseDate() {
-        LocalDate today = LocalDate.now();
-        if (editingExpense != null && editingExpense.date.isBefore(today)) return editingExpense.date;
+        YearMonth currentMonth = YearMonth.now();
+        LocalDate start = currentMonth.atDay(1);
+        LocalDate end = currentMonth.atEndOfMonth();
         try {
             dateSpinner.commitEdit();
             LocalDate date = getDateFromSpinner();
-            if (!allowedExpenseDate(date, today)) throw new IllegalArgumentException();
+            if (!allowedExpenseDate(date, currentMonth)) throw new IllegalArgumentException();
             return date;
         } catch (Exception e) {
-            configureExpenseDate(today, today);
-            showError("Choose today's date or a later date. Past dates are not allowed.");
+            LocalDate fallback = clampToMonth(LocalDate.now(), currentMonth);
+            configureExpenseDate(fallback, currentMonth);
+            showError("Choose a date within the current month ("
+                    + start.format(GOAL_DATE) + " to " + end.format(GOAL_DATE) + ").");
             return null;
         }
     }
@@ -2492,7 +2519,7 @@ public class FinancialTracker extends JFrame {
     // ------------------------------------------------------------------
 
     /**
-     * Two simple bar charts built from Swing panels.
+- Two simple bar charts built from Swing panels.
      */
     private JPanel createReportsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
@@ -2734,9 +2761,9 @@ public class FinancialTracker extends JFrame {
     /** A dated income or transfer into savings. The history is independent of goal names. */
 
     /**
-     * ArrayLists, HashMaps and the undo Stack remain the working data structures.
-     * A single UTF-8 text snapshot per user is saved after every modification.
-     * No database, external library or Java object serialization is needed.
+- ArrayLists, HashMaps and the undo Stack remain the working data structures.
+- A single UTF-8 text snapshot per user is saved after every modification.
+- No database, external library or Java object serialization is needed.
      */
 
     /** One expense row. */
