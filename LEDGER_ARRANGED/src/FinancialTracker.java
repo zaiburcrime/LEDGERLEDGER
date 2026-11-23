@@ -1305,7 +1305,7 @@ public class FinancialTracker extends JFrame {
         planActions.add(clearButton);
 
         planTableModel = new DefaultTableModel(new Object[][] {},
-                new String[] {"Category", "Planned", "Actual", "Difference"}) {
+                new String[] {"Category", "Planned", "Spent", "Budget Left"}) {
             private static final long serialVersionUID = 1L;
 
             public boolean isCellEditable(int row, int column) {
