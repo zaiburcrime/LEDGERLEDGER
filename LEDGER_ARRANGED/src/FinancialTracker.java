@@ -1,26 +1,26 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -29,36 +29,33 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Stack;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.SwingUtilities;
 import javax.swing.JComboBox;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
-import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.MatteBorder;
@@ -66,6 +63,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.text.JTextComponent;
 
 /**
 - Ledger - a simple student financial tracker.
@@ -99,7 +97,7 @@ public class FinancialTracker extends JFrame {
     private static final long serialVersionUID = 1L;
 
     // ------------------------------------------------------------------
-    // Colors and fonts used by the window
+    // Colors and fonts used by the window (unchanged palette)
     // ------------------------------------------------------------------
 
     // Dark colors are the default so the window opens like the sample dashboard.
@@ -118,11 +116,11 @@ public class FinancialTracker extends JFrame {
     private static Color BORDER = new Color(190, 198, 210);
 
     // SansSerif is on every school PC. Helvetica is not.
-    private static final Font TITLE_FONT = new Font("SansSerif", Font.BOLD, 20);
+    private static final Font TITLE_FONT = new Font("SansSerif", Font.BOLD, 21);
     private static final Font LABEL_FONT = new Font("SansSerif", Font.PLAIN, 13);
     private static final Font SMALL_FONT = new Font("SansSerif", Font.PLAIN, 12);
     private static final Font BOLD_FONT = new Font("SansSerif", Font.BOLD, 13);
-    private static final Font BIG_FONT = new Font("SansSerif", Font.BOLD, 22);
+    private static final Font BIG_FONT = new Font("SansSerif", Font.BOLD, 23);
 
     private static final DecimalFormat MONEY = new DecimalFormat("#,##0.00",
             java.text.DecimalFormatSymbols.getInstance(Locale.US));
@@ -316,8 +314,8 @@ public class FinancialTracker extends JFrame {
                 if (dateRefreshTimer != null) dateRefreshTimer.stop();
             }
         });
-        setBounds(60, 40, 1000, 720);
-        setMinimumSize(new Dimension(900, 620));
+        setBounds(60, 40, 1040, 740);
+        setMinimumSize(new Dimension(920, 640));
 
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(0, 0, 0, 0));
@@ -424,6 +422,82 @@ public class FinancialTracker extends JFrame {
     }
 
     // ------------------------------------------------------------------
+    // Modern GUI helpers (borders, pills, inputs)
+    // ------------------------------------------------------------------
+
+    private static class RoundedBorder extends AbstractBorder {
+        private static final long serialVersionUID = 1L;
+        private final Color color;
+        private final int radius;
+
+        RoundedBorder(Color color, int radius) {
+            this.color = color;
+            this.radius = radius;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(4, 8, 4, 8);
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c, Insets insets) {
+            insets.set(4, 8, 4, 8);
+            return insets;
+        }
+    }
+
+    private JPanel createCardContainer(int padV, int padH) {
+        JPanel card = new JPanel();
+        card.setBackground(CARD);
+        card.setBorder(new CompoundBorder(
+                new RoundedBorder(BORDER, 12),
+                new EmptyBorder(padV, padH, padV, padH)));
+        return card;
+    }
+
+    private void styleModernButton(JButton btn, boolean primary) {
+        btn.setFont(primary ? BOLD_FONT : LABEL_FONT);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setOpaque(true);
+        btn.setContentAreaFilled(true);
+        if (primary) {
+            btn.setBackground(ACCENT);
+            btn.setForeground(Color.WHITE);
+            btn.setBorder(new CompoundBorder(
+                    new RoundedBorder(ACCENT, 8),
+                    new EmptyBorder(6, 14, 6, 14)));
+        } else {
+            Color bg = darkMode ? new Color(70, 74, 84) : new Color(240, 243, 248);
+            btn.setBackground(bg);
+            btn.setForeground(INK);
+            btn.setBorder(new CompoundBorder(
+                    new RoundedBorder(BORDER, 8),
+                    new EmptyBorder(5, 12, 5, 12)));
+        }
+    }
+
+    private void styleModernField(JTextComponent field, Dimension prefSize) {
+        if (prefSize != null) {
+            field.setPreferredSize(prefSize);
+        }
+        field.setFont(LABEL_FONT);
+        field.setBorder(new CompoundBorder(
+                new RoundedBorder(BORDER, 8),
+                new EmptyBorder(3, 6, 3, 6)));
+    }
+
+    // ------------------------------------------------------------------
     // Putting the window together
     // ------------------------------------------------------------------
 
@@ -457,21 +531,28 @@ public class FinancialTracker extends JFrame {
         JPanel side = new JPanel();
         side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
         side.setBackground(SIDE);
-        side.setPreferredSize(new Dimension(190, 0));
-        side.setBorder(new EmptyBorder(16, 10, 16, 10));
+        side.setPreferredSize(new Dimension(205, 0));
+        side.setBorder(new EmptyBorder(20, 12, 20, 12));
+
+        JLabel badge = new JLabel("WORKSPACE");
+        badge.setFont(new Font("SansSerif", Font.BOLD, 10));
+        badge.setForeground(new Color(220, 212, 255));
+        badge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        badge.setBorder(new EmptyBorder(0, 12, 4, 8));
+        side.add(badge);
 
         JLabel title = new JLabel("Ledger");
-        title.setFont(new Font("SansSerif", Font.BOLD, 16));
+        title.setFont(new Font("SansSerif", Font.BOLD, 18));
         title.setForeground(Color.WHITE);
-        title.setAlignmentX(JLabel.LEFT_ALIGNMENT);
-        title.setBorder(new EmptyBorder(6, 10, 2, 8));
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        title.setBorder(new EmptyBorder(0, 12, 2, 8));
         side.add(title);
 
-        JLabel course = new JLabel("money tracker");
+        JLabel course = new JLabel("Student money tracker");
         course.setFont(SMALL_FONT);
         course.setForeground(new Color(230, 224, 255));
-        course.setAlignmentX(JLabel.LEFT_ALIGNMENT);
-        course.setBorder(new EmptyBorder(0, 10, 16, 8));
+        course.setAlignmentX(Component.LEFT_ALIGNMENT);
+        course.setBorder(new EmptyBorder(0, 12, 20, 8));
         side.add(course);
 
         String[] pages = {"Dashboard", "Expenses", "Allowance", "Savings Goals", "Reports"};
@@ -483,24 +564,33 @@ public class FinancialTracker extends JFrame {
             btn.putClientProperty("page", page);
             btn.setFont(BOLD_FONT);
             btn.setForeground(Color.WHITE);
-            btn.setBackground(new Color(90, 65, 180));
+            btn.setBackground(SIDE);
             btn.setOpaque(true);
             btn.setContentAreaFilled(true);
             btn.setBorderPainted(true);
             btn.setFocusPainted(false);
+            btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             btn.setHorizontalAlignment(SwingConstants.LEFT);
-            btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-            btn.setAlignmentX(JButton.LEFT_ALIGNMENT);
-            btn.setBorder(new javax.swing.border.CompoundBorder(
-                new LineBorder(new Color(140, 120, 220), 1),
-                new EmptyBorder(6, 12, 6, 12)));
+            btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+            btn.setBorder(new CompoundBorder(
+                    new RoundedBorder(new Color(145, 122, 230), 10),
+                    new EmptyBorder(8, 14, 8, 14)));
             btn.addActionListener(e -> showPage(page));
             navButtons[i] = btn;
             side.add(btn);
-            side.add(Box.createVerticalStrut(4));
+            side.add(Box.createVerticalStrut(6));
         }
 
         side.add(Box.createVerticalGlue());
+
+        JLabel footerHint = new JLabel("Data Structures Edition");
+        footerHint.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        footerHint.setForeground(new Color(220, 212, 255));
+        footerHint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        footerHint.setBorder(new EmptyBorder(8, 12, 0, 8));
+        side.add(footerHint);
+
         return side;
     }
 
@@ -508,7 +598,10 @@ public class FinancialTracker extends JFrame {
         cardLayout.show(contentArea, name);
         for (JButton btn : navButtons) {
             boolean active = name.equals(btn.getClientProperty("page"));
-            btn.setBackground(active ? new Color(70, 50, 150) : new Color(90, 65, 180));
+            btn.setBackground(active ? SIDE_ON : SIDE);
+            btn.setBorder(new CompoundBorder(
+                    new RoundedBorder(active ? Color.WHITE : new Color(145, 122, 230), 10),
+                    new EmptyBorder(8, 14, 8, 14)));
             btn.setForeground(Color.WHITE);
         }
         if (pageTitleLabel != null) pageTitleLabel.setText(name);
@@ -533,45 +626,53 @@ public class FinancialTracker extends JFrame {
 
     private JPanel createHeader() {
         JPanel header = new JPanel();
-        header.setLayout(new BorderLayout(10, 0));
+        header.setLayout(new BorderLayout(12, 0));
         header.setBackground(CARD);
-        header.setBorder(new MatteBorder(0, 0, 1, 0, BORDER));
+        header.setBorder(new CompoundBorder(
+                new MatteBorder(0, 0, 1, 0, BORDER),
+                new EmptyBorder(8, 18, 8, 18)));
 
         JPanel left = new JPanel();
-        left.setLayout(new FlowLayout(FlowLayout.LEFT, 14, 10));
+        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
         left.setOpaque(false);
 
         JLabel logo = new JLabel("Dashboard");
         logo.setFont(TITLE_FONT);
         logo.setForeground(INK);
+        logo.setAlignmentX(Component.LEFT_ALIGNMENT);
         pageTitleLabel = logo;
 
         JLabel subtitle = new JLabel("Summary of your money");
         subtitle.setFont(SMALL_FONT);
         subtitle.setForeground(MUTED);
+        subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         pageSubtitleLabel = subtitle;
 
         left.add(logo);
+        left.add(Box.createVerticalStrut(2));
         left.add(subtitle);
 
         JPanel right = new JPanel();
-        right.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        right.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 6));
         right.setOpaque(false);
 
+        JPanel pill = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        pill.setBackground(BG);
+        pill.setBorder(new RoundedBorder(BORDER, 14));
         JLabel userLabel = new JLabel("Signed in: " + username);
-        userLabel.setFont(LABEL_FONT);
-        userLabel.setForeground(MUTED);
+        userLabel.setFont(SMALL_FONT);
+        userLabel.setForeground(INK);
+        pill.add(userLabel);
 
         JButton logoutButton = new JButton("Log out");
-        logoutButton.setFont(LABEL_FONT);
-        logoutButton.setFocusPainted(false);
+        styleModernButton(logoutButton, false);
         logoutButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 logOut();
             }
         });
 
-        right.add(userLabel);
+        right.add(pill);
         right.add(logoutButton);
 
         header.add(left, BorderLayout.WEST);
@@ -584,11 +685,11 @@ public class FinancialTracker extends JFrame {
         bar.setBackground(CARD);
         bar.setBorder(new MatteBorder(1, 0, 0, 0, BORDER));
 
-        JLabel hint = new JLabel("  ArrayList (records)  -  HashMap (monthly budget)  -  "
-                + "Stack (undo)  -  Automatic local file saving");
+        JLabel hint = new JLabel("  ArrayList (records)  •  HashMap (monthly budget)  •  "
+                + "Stack (undo)  •  Automatic local file saving");
         hint.setFont(SMALL_FONT);
         hint.setForeground(MUTED);
-        hint.setBorder(new EmptyBorder(6, 8, 6, 8));
+        hint.setBorder(new EmptyBorder(7, 10, 7, 10));
 
         bar.add(hint, BorderLayout.WEST);
         return bar;
@@ -599,11 +700,11 @@ public class FinancialTracker extends JFrame {
     // ------------------------------------------------------------------
 
     private JPanel createDashboardPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
         panel.setBackground(BG);
-        panel.setBorder(new EmptyBorder(14, 14, 14, 14));
+        panel.setBorder(new EmptyBorder(16, 18, 16, 18));
 
-        JPanel stats = new JPanel(new GridLayout(1, 4, 10, 0));
+        JPanel stats = new JPanel(new GridLayout(1, 4, 14, 0));
         stats.setOpaque(false);
 
         allowanceValueLabel = new JLabel("₱0.00");
@@ -618,19 +719,21 @@ public class FinancialTracker extends JFrame {
 
         panel.add(stats, BorderLayout.NORTH);
 
-        JPanel middle = new JPanel(new BorderLayout(0, 8));
-        middle.setOpaque(false);
+        JPanel middle = createCardContainer(14, 16);
+        middle.setLayout(new BorderLayout(0, 10));
 
         JLabel summaryTitle = new JLabel("Summary of your data");
-        summaryTitle.setFont(BOLD_FONT);
+        summaryTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
         summaryTitle.setForeground(INK);
         JPanel summaryHeader = new JPanel(new BorderLayout(8, 0));
         summaryHeader.setOpaque(false);
         summaryHeader.add(summaryTitle, BorderLayout.WEST);
-        JPanel monthChooser = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+
+        JPanel monthChooser = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         monthChooser.setOpaque(false);
         monthChooser.add(smallLabel("SHOW MONTH"));
         dashboardMonthBox = new JComboBox<String>();
+        dashboardMonthBox.setPreferredSize(new Dimension(115, 30));
         dashboardMonthBox.addActionListener(e -> {
             if (!fillingDashboardMonths && dashboardMonthBox.getSelectedItem() != null) {
                 dashboardMonth = parseFilterMonth(dashboardMonthBox.getSelectedItem().toString());
@@ -639,6 +742,7 @@ public class FinancialTracker extends JFrame {
         });
         monthChooser.add(dashboardMonthBox);
         JButton resetAllButton = new JButton("Reset all data...");
+        styleModernButton(resetAllButton, false);
         resetAllButton.addActionListener(e -> resetAllData());
         monthChooser.add(resetAllButton);
         summaryHeader.add(monthChooser, BorderLayout.EAST);
@@ -646,12 +750,12 @@ public class FinancialTracker extends JFrame {
         summaryArea = new JTextArea();
         summaryArea.setEditable(false);
         summaryArea.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        summaryArea.setBackground(CARD);
+        summaryArea.setBackground(BG);
         summaryArea.setForeground(INK);
-        summaryArea.setBorder(new EmptyBorder(10, 12, 10, 12));
+        summaryArea.setBorder(new EmptyBorder(12, 14, 12, 14));
 
         JScrollPane scroll = new JScrollPane(summaryArea);
-        scroll.setBorder(new MatteBorder(1, 1, 1, 1, BORDER));
+        scroll.setBorder(new RoundedBorder(BORDER, 10));
 
         middle.add(summaryHeader, BorderLayout.NORTH);
         middle.add(scroll, BorderLayout.CENTER);
@@ -662,11 +766,11 @@ public class FinancialTracker extends JFrame {
 
     /** One small card with a caption and a big number. */
     private JPanel createStatCard(String caption, JLabel valueLabel, Color valueColor) {
-        JPanel card = new JPanel(new BorderLayout(0, 4));
+        JPanel card = new JPanel(new BorderLayout(0, 6));
         card.setBackground(CARD);
-        card.setBorder(new javax.swing.border.CompoundBorder(
-                new LineBorder(BORDER, 1),
-                new EmptyBorder(12, 14, 12, 14)));
+        card.setBorder(new CompoundBorder(
+                new RoundedBorder(BORDER, 12),
+                new EmptyBorder(14, 16, 14, 16)));
 
         JLabel captionLabel = new JLabel(caption);
         captionLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
@@ -686,9 +790,9 @@ public class FinancialTracker extends JFrame {
     // ------------------------------------------------------------------
 
     private JPanel createExpensesPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
         panel.setBackground(BG);
-        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
+        panel.setBorder(new EmptyBorder(16, 18, 16, 18));
 
         panel.add(createExpenseForm(), BorderLayout.NORTH);
         panel.add(createExpenseList(), BorderLayout.CENTER);
@@ -696,20 +800,17 @@ public class FinancialTracker extends JFrame {
     }
 
     private JPanel createExpenseForm() {
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(CARD);
-        form.setBorder(new EmptyBorder(12, 14, 12, 14));
+        JPanel form = createCardContainer(14, 16);
+        form.setLayout(new GridBagLayout());
 
         descriptionField = new JTextField();
-        descriptionField.setPreferredSize(new Dimension(230, 28));
-        descriptionField.setFont(LABEL_FONT);
+        styleModernField(descriptionField, new Dimension(235, 32));
 
         amountField = new JTextField();
-        amountField.setPreferredSize(new Dimension(110, 28));
-        amountField.setFont(LABEL_FONT);
+        styleModernField(amountField, new Dimension(115, 32));
 
         categoryBox = new JComboBox<String>();
-        categoryBox.setPreferredSize(new Dimension(140, 28));
+        categoryBox.setPreferredSize(new Dimension(145, 32));
         categoryBox.setFont(LABEL_FONT);
         fillCategoryBox();
 
@@ -720,15 +821,12 @@ public class FinancialTracker extends JFrame {
         dateSpinner.setToolTipText("Select any date within the current month ("
                 + currentMonth.atDay(1).format(GOAL_DATE) + " - "
                 + currentMonth.atEndOfMonth().format(GOAL_DATE) + ").");
-        dateSpinner.setPreferredSize(new Dimension(140, 28));
+        dateSpinner.setPreferredSize(new Dimension(145, 32));
         dateSpinner.setFont(LABEL_FONT);
+        dateSpinner.setBorder(new RoundedBorder(BORDER, 8));
 
         addExpenseButton = new JButton("Add expense");
-        addExpenseButton.setFont(BOLD_FONT);
-        addExpenseButton.setBackground(ACCENT);
-        addExpenseButton.setForeground(Color.WHITE);
-        addExpenseButton.setOpaque(true);
-        addExpenseButton.setFocusPainted(false);
+        styleModernButton(addExpenseButton, true);
         addExpenseButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 addExpense();
@@ -736,7 +834,7 @@ public class FinancialTracker extends JFrame {
         });
 
         saveExpenseButton = new JButton("Save changes");
-        saveExpenseButton.setFont(BOLD_FONT);
+        styleModernButton(saveExpenseButton, true);
         saveExpenseButton.setVisible(false);
         saveExpenseButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -745,7 +843,7 @@ public class FinancialTracker extends JFrame {
         });
 
         cancelExpenseButton = new JButton("Cancel");
-        cancelExpenseButton.setFont(LABEL_FONT);
+        styleModernButton(cancelExpenseButton, false);
         cancelExpenseButton.setVisible(false);
         cancelExpenseButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -754,7 +852,7 @@ public class FinancialTracker extends JFrame {
         });
 
         JButton newCategoryButton = new JButton("New category...");
-        newCategoryButton.setFont(LABEL_FONT);
+        styleModernButton(newCategoryButton, false);
         newCategoryButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 addNewCategory();
@@ -776,7 +874,7 @@ public class FinancialTracker extends JFrame {
         form.add(smallLabel("DATE"), gbc);
 
         gbc.gridy = 1;
-        gbc.insets = new Insets(0, 0, 8, 12);
+        gbc.insets = new Insets(0, 0, 10, 12);
         gbc.gridx = 0;
         form.add(descriptionField, gbc);
         gbc.gridx = 1;
@@ -792,6 +890,7 @@ public class FinancialTracker extends JFrame {
         buttons.add(saveExpenseButton);
         buttons.add(cancelExpenseButton);
         JButton clearExpenseButton = new JButton("Clear");
+        styleModernButton(clearExpenseButton, false);
         clearExpenseButton.addActionListener(e -> {
             stopEditingExpense();
             if (categoryBox.getItemCount() > 0) categoryBox.setSelectedIndex(0);
@@ -803,6 +902,7 @@ public class FinancialTracker extends JFrame {
         gbc.gridy = 2;
         gbc.gridx = 0;
         gbc.gridwidth = 4;
+        gbc.insets = new Insets(0, 0, 0, 12);
         form.add(buttons, gbc);
 
         // An empty, stretchy cell on the right keeps the fields on the left.
@@ -818,16 +918,14 @@ public class FinancialTracker extends JFrame {
     }
 
     private JPanel createExpenseList() {
-        JPanel panel = new JPanel(new BorderLayout(0, 8));
-        panel.setBackground(CARD);
-        panel.setBorder(new EmptyBorder(10, 14, 12, 14));
+        JPanel panel = createCardContainer(14, 16);
+        panel.setLayout(new BorderLayout(0, 10));
 
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         toolbar.setOpaque(false);
 
         searchField = new JTextField();
-        searchField.setPreferredSize(new Dimension(180, 28));
-        searchField.setFont(LABEL_FONT);
+        styleModernField(searchField, new Dimension(180, 30));
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) {
                 rebuildExpenseTable();
@@ -847,7 +945,7 @@ public class FinancialTracker extends JFrame {
             "Amount: low to high", "Description A-Z"
         });
         sortBox.setFont(LABEL_FONT);
-        sortBox.setPreferredSize(new Dimension(170, 28));
+        sortBox.setPreferredSize(new Dimension(170, 30));
         sortBox.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 rebuildExpenseTable();
@@ -855,7 +953,7 @@ public class FinancialTracker extends JFrame {
         });
 
         JButton editButton = new JButton("Edit");
-        editButton.setFont(LABEL_FONT);
+        styleModernButton(editButton, false);
         editButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 startEditingExpense();
@@ -863,7 +961,7 @@ public class FinancialTracker extends JFrame {
         });
 
         JButton deleteButton = new JButton("Delete");
-        deleteButton.setFont(LABEL_FONT);
+        styleModernButton(deleteButton, false);
         deleteButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 deleteExpense();
@@ -871,7 +969,7 @@ public class FinancialTracker extends JFrame {
         });
 
         undoButton = new JButton("Undo delete");
-        undoButton.setFont(LABEL_FONT);
+        styleModernButton(undoButton, false);
         undoButton.setEnabled(false);
         undoButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -891,13 +989,16 @@ public class FinancialTracker extends JFrame {
         toolbar.add(deleteButton);
         toolbar.add(undoButton);
         toolbar.add(expenseCountLabel);
+
         JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         filterRow.setOpaque(false);
         JButton filterButton = new JButton("Filters / history...");
+        styleModernButton(filterButton, false);
         filterButton.addActionListener(e -> showFilters());
         filterInfo = smallLabel("Current month");
         filterRow.add(filterButton);
         JButton clearFilters = new JButton("Clear filters");
+        styleModernButton(clearFilters, false);
         clearFilters.addActionListener(e -> {
             expenseMonth = YearMonth.now();
             expenseFrom = null;
@@ -910,7 +1011,8 @@ public class FinancialTracker extends JFrame {
         });
         filterRow.add(clearFilters);
         filterRow.add(filterInfo);
-        JPanel top = new JPanel(new GridLayout(2, 1, 0, 4));
+
+        JPanel top = new JPanel(new GridLayout(2, 1, 0, 6));
         top.setOpaque(false);
         top.add(toolbar);
         top.add(filterRow);
@@ -926,11 +1028,12 @@ public class FinancialTracker extends JFrame {
 
         expenseTable = new JTable(expenseTableModel);
         expenseTable.setFont(LABEL_FONT);
-        expenseTable.setRowHeight(26);
+        expenseTable.setRowHeight(30);
         expenseTable.setShowGrid(true);
         expenseTable.setGridColor(BORDER);
         expenseTable.setFillsViewportHeight(true);
         expenseTable.getTableHeader().setFont(BOLD_FONT);
+        expenseTable.getTableHeader().setPreferredSize(new Dimension(0, 32));
         expenseTable.getTableHeader().setReorderingAllowed(false);
 
         DefaultTableCellRenderer right = new DefaultTableCellRenderer();
@@ -942,7 +1045,7 @@ public class FinancialTracker extends JFrame {
         expenseTable.getColumnModel().getColumn(3).setPreferredWidth(120);
 
         JScrollPane scroll = new JScrollPane(expenseTable);
-        scroll.setBorder(new MatteBorder(1, 1, 1, 1, BORDER));
+        scroll.setBorder(new RoundedBorder(BORDER, 10));
 
         panel.add(top, BorderLayout.NORTH);
         panel.add(scroll, BorderLayout.CENTER);
@@ -954,38 +1057,30 @@ public class FinancialTracker extends JFrame {
     // ------------------------------------------------------------------
 
     private JPanel createGoalsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
         panel.setBackground(BG);
-        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
+        panel.setBorder(new EmptyBorder(16, 18, 16, 18));
         panel.add(createGoalForm(), BorderLayout.NORTH);
         panel.add(createGoalList(), BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel createGoalForm() {
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(CARD);
-        form.setBorder(new EmptyBorder(12, 14, 12, 14));
+        JPanel form = createCardContainer(14, 16);
+        form.setLayout(new GridBagLayout());
 
         goalNameField = new JTextField();
-        goalNameField.setPreferredSize(new Dimension(220, 28));
-        goalNameField.setFont(LABEL_FONT);
+        styleModernField(goalNameField, new Dimension(225, 32));
 
         goalTargetField = new JTextField();
-        goalTargetField.setPreferredSize(new Dimension(110, 28));
-        goalTargetField.setFont(LABEL_FONT);
+        styleModernField(goalTargetField, new Dimension(115, 32));
 
         goalDeadlineField = new JTextField();
-        goalDeadlineField.setPreferredSize(new Dimension(120, 28));
-        goalDeadlineField.setFont(LABEL_FONT);
+        styleModernField(goalDeadlineField, new Dimension(125, 32));
         goalDeadlineField.setToolTipText("Enter MM/DD/YYYY, for example 05/31/2028.");
 
         addGoalButton = new JButton("Add goal");
-        addGoalButton.setFont(BOLD_FONT);
-        addGoalButton.setBackground(ACCENT);
-        addGoalButton.setForeground(Color.WHITE);
-        addGoalButton.setOpaque(true);
-        addGoalButton.setFocusPainted(false);
+        styleModernButton(addGoalButton, true);
         addGoalButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 addGoal();
@@ -993,7 +1088,7 @@ public class FinancialTracker extends JFrame {
         });
 
         saveGoalButton = new JButton("Save changes");
-        saveGoalButton.setFont(BOLD_FONT);
+        styleModernButton(saveGoalButton, true);
         saveGoalButton.setVisible(false);
         saveGoalButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -1002,7 +1097,7 @@ public class FinancialTracker extends JFrame {
         });
 
         cancelGoalButton = new JButton("Cancel");
-        cancelGoalButton.setFont(LABEL_FONT);
+        styleModernButton(cancelGoalButton, false);
         cancelGoalButton.setVisible(false);
         cancelGoalButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -1023,7 +1118,7 @@ public class FinancialTracker extends JFrame {
         form.add(smallLabel("SAVE BY (MM/DD/YYYY)"), gbc);
 
         gbc.gridy = 1;
-        gbc.insets = new Insets(0, 0, 8, 12);
+        gbc.insets = new Insets(0, 0, 10, 12);
         gbc.gridx = 0;
         form.add(goalNameField, gbc);
         gbc.gridx = 1;
@@ -1037,6 +1132,7 @@ public class FinancialTracker extends JFrame {
         buttons.add(saveGoalButton);
         buttons.add(cancelGoalButton);
         JButton clearGoalButton = new JButton("Clear");
+        styleModernButton(clearGoalButton, false);
         clearGoalButton.addActionListener(e -> {
             stopEditingGoal();
             goalNameField.requestFocusInWindow();
@@ -1046,6 +1142,7 @@ public class FinancialTracker extends JFrame {
         gbc.gridy = 2;
         gbc.gridx = 0;
         gbc.gridwidth = 3;
+        gbc.insets = new Insets(0, 0, 0, 12);
         form.add(buttons, gbc);
 
         gbc.gridy = 1;
@@ -1060,19 +1157,17 @@ public class FinancialTracker extends JFrame {
     }
 
     private JPanel createGoalList() {
-        JPanel panel = new JPanel(new BorderLayout(0, 8));
-        panel.setBackground(CARD);
-        panel.setBorder(new EmptyBorder(10, 14, 12, 14));
+        JPanel panel = createCardContainer(14, 16);
+        panel.setLayout(new BorderLayout(0, 10));
 
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         toolbar.setOpaque(false);
 
         depositField = new JTextField();
-        depositField.setPreferredSize(new Dimension(110, 28));
-        depositField.setFont(LABEL_FONT);
+        styleModernField(depositField, new Dimension(115, 30));
 
         JButton depositButton = new JButton("Add Savings");
-        depositButton.setFont(LABEL_FONT);
+        styleModernButton(depositButton, true);
         depositButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 depositToGoal();
@@ -1080,7 +1175,7 @@ public class FinancialTracker extends JFrame {
         });
 
         JButton editButton = new JButton("Edit");
-        editButton.setFont(LABEL_FONT);
+        styleModernButton(editButton, false);
         editButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 startEditingGoal();
@@ -1088,13 +1183,14 @@ public class FinancialTracker extends JFrame {
         });
 
         JButton deleteButton = new JButton("Delete");
-        deleteButton.setFont(LABEL_FONT);
+        styleModernButton(deleteButton, false);
         deleteButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 deleteGoal();
             }
         });
         JButton adviceButton = new JButton("Savings advice");
+        styleModernButton(adviceButton, false);
         adviceButton.addActionListener(e -> showSavingsAdvice());
 
         goalInfoLabel = new JLabel("Select a goal to add money to it");
@@ -1104,13 +1200,16 @@ public class FinancialTracker extends JFrame {
         toolbar.add(depositField);
         toolbar.add(depositButton);
         JButton clearDepositButton = new JButton("Clear amount");
+        styleModernButton(clearDepositButton, false);
         clearDepositButton.addActionListener(e -> depositField.setText(""));
         toolbar.add(clearDepositButton);
+
         JPanel goalActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         goalActions.setOpaque(false);
         goalActions.add(editButton);
         goalActions.add(deleteButton);
         JButton resetGoalButton = new JButton("Reset progress...");
+        styleModernButton(resetGoalButton, false);
         resetGoalButton.addActionListener(e -> resetGoalProgress());
         goalActions.add(resetGoalButton);
         goalActions.add(adviceButton);
@@ -1127,11 +1226,12 @@ public class FinancialTracker extends JFrame {
 
         goalTable = new JTable(goalTableModel);
         goalTable.setFont(LABEL_FONT);
-        goalTable.setRowHeight(26);
+        goalTable.setRowHeight(30);
         goalTable.setShowGrid(true);
         goalTable.setGridColor(BORDER);
         goalTable.setFillsViewportHeight(true);
         goalTable.getTableHeader().setFont(BOLD_FONT);
+        goalTable.getTableHeader().setPreferredSize(new Dimension(0, 32));
         goalTable.getTableHeader().setReorderingAllowed(false);
 
         DefaultTableCellRenderer right = new DefaultTableCellRenderer();
@@ -1143,9 +1243,9 @@ public class FinancialTracker extends JFrame {
         goalTable.getColumnModel().getColumn(3).setPreferredWidth(90);
 
         JScrollPane scroll = new JScrollPane(goalTable);
-        scroll.setBorder(new MatteBorder(1, 1, 1, 1, BORDER));
+        scroll.setBorder(new RoundedBorder(BORDER, 10));
 
-        JPanel goalTools = new JPanel(new GridLayout(2, 1, 0, 4));
+        JPanel goalTools = new JPanel(new GridLayout(2, 1, 0, 6));
         goalTools.setOpaque(false);
         goalTools.add(toolbar);
         goalTools.add(goalActions);
@@ -1159,25 +1259,20 @@ public class FinancialTracker extends JFrame {
     // ------------------------------------------------------------------
 
     private JPanel createAllowancePanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
         panel.setBackground(BG);
-        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
+        panel.setBorder(new EmptyBorder(16, 18, 16, 18));
 
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(CARD);
-        form.setBorder(new EmptyBorder(12, 14, 12, 14));
+        JPanel form = createCardContainer(14, 16);
+        form.setLayout(new GridBagLayout());
 
         allowanceField = new JTextField();
         allowanceField.addActionListener(e -> saveAllowance());
-        allowanceField.setPreferredSize(new Dimension(150, 28));
-        allowanceField.setFont(LABEL_FONT);
+        styleModernField(allowanceField, new Dimension(180, 32));
+        allowanceField.setMinimumSize(new Dimension(180, 32));
 
         JButton saveButton = new JButton("Save allowance");
-        saveButton.setFont(BOLD_FONT);
-        saveButton.setBackground(ACCENT);
-        saveButton.setForeground(Color.WHITE);
-        saveButton.setOpaque(true);
-        saveButton.setFocusPainted(false);
+        styleModernButton(saveButton, true);
         saveButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 saveAllowance();
@@ -1193,59 +1288,76 @@ public class FinancialTracker extends JFrame {
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.anchor = GridBagConstraints.WEST;
-        gbc.insets = new Insets(0, 0, 6, 12);
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        gbc.insets = new Insets(0, 0, 6, 10);
 
+        // Row 0: Label
         gbc.gridy = 0;
         gbc.gridx = 0;
+        gbc.gridwidth = 1;
         form.add(smallLabel("MONTHLY ALLOWANCE"), gbc);
-        gbc.gridx = 1;
-        form.add(smallLabel(""), gbc);
 
+        // Row 1: Wide input + Save + Extra income
         gbc.gridy = 1;
         gbc.gridx = 0;
         form.add(allowanceField, gbc);
+
         gbc.gridx = 1;
         form.add(saveButton, gbc);
+
         gbc.gridx = 2;
         JButton incomeButton = new JButton("Add extra income");
+        styleModernButton(incomeButton, false);
         incomeButton.addActionListener(e -> addIncome());
         form.add(incomeButton, gbc);
 
+        // Row 2: Secondary action buttons
         gbc.gridy = 2;
         gbc.gridx = 0;
         gbc.gridwidth = 3;
-        JPanel allowanceActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        gbc.insets = new Insets(2, 0, 6, 10);
+        JPanel allowanceActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         allowanceActions.setOpaque(false);
         JButton clearAllowanceButton = new JButton("Clear input");
+        styleModernButton(clearAllowanceButton, false);
         clearAllowanceButton.addActionListener(e -> {
             allowanceField.setText("");
             allowanceMessageLabel.setText("Input cleared; saved allowance unchanged.");
             allowanceMessageLabel.setForeground(MUTED);
         });
         JButton resetAllowanceButton = new JButton("Reset allowance...");
+        styleModernButton(resetAllowanceButton, false);
         resetAllowanceButton.addActionListener(e -> resetAllowance());
         JButton manageIncomeButton = new JButton("Manage income...");
+        styleModernButton(manageIncomeButton, false);
         manageIncomeButton.addActionListener(e -> manageIncome());
         allowanceActions.add(clearAllowanceButton);
         allowanceActions.add(resetAllowanceButton);
         allowanceActions.add(manageIncomeButton);
         form.add(allowanceActions, gbc);
 
+        // Row 3: Status message
         gbc.gridy = 3;
         gbc.gridx = 0;
         gbc.gridwidth = 3;
+        gbc.insets = new Insets(0, 0, 4, 10);
         form.add(allowanceMessageLabel, gbc);
 
+        // Row 4: Month info
         gbc.gridy = 4;
         form.add(monthInfoLabel, gbc);
 
+        // Right side: Total budget card absorbs extra horizontal space
         gbc.gridy = 0;
         gbc.gridheight = 5;
         gbc.gridx = 3;
         gbc.gridwidth = 1;
-        gbc.weightx = 1;
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.NORTHEAST;
         gbc.fill = GridBagConstraints.NONE;
+        gbc.insets = new Insets(0, 8, 0, 0);
         form.add(createTotalBudgetPanel(), gbc);
 
         panel.add(form, BorderLayout.NORTH);
@@ -1257,23 +1369,23 @@ public class FinancialTracker extends JFrame {
         JPanel box = new JPanel();
         box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
         box.setBackground(BG);
-        box.setBorder(new javax.swing.border.CompoundBorder(
-                new LineBorder(BORDER, 1),
-                new EmptyBorder(10, 14, 10, 14)));
+        box.setBorder(new CompoundBorder(
+                new RoundedBorder(BORDER, 12),
+                new EmptyBorder(12, 16, 12, 16)));
 
         JLabel title = smallLabel("TOTAL MONTHLY BUDGET");
-        title.setAlignmentX(JLabel.LEFT_ALIGNMENT);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         totalBudgetValueLabel = new JLabel("₱0.00");
         totalBudgetValueLabel.setFont(BIG_FONT);
         totalBudgetValueLabel.setForeground(ACCENT);
         totalBudgetValueLabel.putClientProperty("keepColor", Boolean.TRUE);
-        totalBudgetValueLabel.setAlignmentX(JLabel.LEFT_ALIGNMENT);
+        totalBudgetValueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         budgetBreakdownLabel = new JLabel("Allowance: ₱0.00  +  Extra income: ₱0.00");
         budgetBreakdownLabel.setFont(SMALL_FONT);
         budgetBreakdownLabel.setForeground(MUTED);
-        budgetBreakdownLabel.setAlignmentX(JLabel.LEFT_ALIGNMENT);
+        budgetBreakdownLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         box.add(title);
         box.add(Box.createVerticalStrut(4));
@@ -1285,23 +1397,21 @@ public class FinancialTracker extends JFrame {
 
     /** Planned budget per category, kept in a HashMap. */
     private JPanel createPlanPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 8));
-        panel.setBackground(CARD);
-        panel.setBorder(new EmptyBorder(10, 14, 12, 14));
+        JPanel panel = createCardContainer(14, 16);
+        panel.setLayout(new BorderLayout(0, 10));
 
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         toolbar.setOpaque(false);
 
         planCategoryBox = new JComboBox<String>();
         planCategoryBox.setFont(LABEL_FONT);
-        planCategoryBox.setPreferredSize(new Dimension(140, 28));
+        planCategoryBox.setPreferredSize(new Dimension(145, 30));
 
         planAmountField = new JTextField();
-        planAmountField.setPreferredSize(new Dimension(110, 28));
-        planAmountField.setFont(LABEL_FONT);
+        styleModernField(planAmountField, new Dimension(115, 30));
 
         JButton setButton = new JButton("Set plan");
-        setButton.setFont(LABEL_FONT);
+        styleModernButton(setButton, true);
         setButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 savePlanForCategory();
@@ -1309,7 +1419,7 @@ public class FinancialTracker extends JFrame {
         });
 
         JButton clearButton = new JButton("Reset monthly plan...");
-        clearButton.setFont(LABEL_FONT);
+        styleModernButton(clearButton, false);
         clearButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 clearPlan();
@@ -1322,11 +1432,14 @@ public class FinancialTracker extends JFrame {
         toolbar.add(planAmountField);
         toolbar.add(setButton);
         JButton clearPlanInput = new JButton("Clear input");
+        styleModernButton(clearPlanInput, false);
         clearPlanInput.addActionListener(e -> planAmountField.setText(""));
         toolbar.add(clearPlanInput);
+
         JPanel planActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         planActions.setOpaque(false);
         JButton deletePlanButton = new JButton("Delete selected plan...");
+        styleModernButton(deletePlanButton, false);
         deletePlanButton.addActionListener(e -> deleteSelectedPlan());
         planActions.add(deletePlanButton);
         planActions.add(clearButton);
@@ -1342,11 +1455,12 @@ public class FinancialTracker extends JFrame {
 
         planTable = new JTable(planTableModel);
         planTable.setFont(LABEL_FONT);
-        planTable.setRowHeight(26);
+        planTable.setRowHeight(30);
         planTable.setShowGrid(true);
         planTable.setGridColor(BORDER);
         planTable.setFillsViewportHeight(true);
         planTable.getTableHeader().setFont(BOLD_FONT);
+        planTable.getTableHeader().setPreferredSize(new Dimension(0, 32));
         planTable.getTableHeader().setReorderingAllowed(false);
         planTable.getSelectionModel().addListSelectionListener(e -> {
             int row = planTable.getSelectedRow();
@@ -1359,9 +1473,9 @@ public class FinancialTracker extends JFrame {
         });
 
         JScrollPane scroll = new JScrollPane(planTable);
-        scroll.setBorder(new MatteBorder(1, 1, 1, 1, BORDER));
+        scroll.setBorder(new RoundedBorder(BORDER, 10));
 
-        JPanel planTools = new JPanel(new GridLayout(2, 1, 0, 4));
+        JPanel planTools = new JPanel(new GridLayout(2, 1, 0, 6));
         planTools.setOpaque(false);
         planTools.add(toolbar);
         planTools.add(planActions);
@@ -1370,11 +1484,6 @@ public class FinancialTracker extends JFrame {
         fillCategoryBox();
         return panel;
     }
-
-    // ------------------------------------------------------------------
-    // The "+" quick add button
-    // ------------------------------------------------------------------
-
 
     // ------------------------------------------------------------------
     // Expenses: add, edit, delete
@@ -2339,6 +2448,8 @@ public class FinancialTracker extends JFrame {
         Date maxDate = spinnerDate(end);
         LocalDate clampedInitial = clampToMonth(initial == null ? LocalDate.now() : initial, month);
         return new SpinnerDateModel(spinnerDate(clampedInitial), minDate, maxDate, Calendar.DAY_OF_MONTH) {
+            private static final long serialVersionUID = 1L;
+
             @Override
             public void setCalendarField(int ignored) {
                 super.setCalendarField(Calendar.DAY_OF_MONTH);
@@ -2464,49 +2575,45 @@ public class FinancialTracker extends JFrame {
     }
 
     private void paintSidebar() {
+        contentPane.setBackground(BG);
 
-    // Apply the main theme
+        refreshAll();
 
-    contentPane.setBackground(BG);
+        if (allowanceValueLabel != null)
+            allowanceValueLabel.setForeground(ACCENT);
 
-    refreshAll();
+        if (spentValueLabel != null)
+            spentValueLabel.setForeground(RED);
 
-    if (allowanceValueLabel != null)
-        allowanceValueLabel.setForeground(ACCENT);
+        if (sidebar != null) {
+            sidebar.setBackground(SIDE);
 
-    if (spentValueLabel != null)
-        spentValueLabel.setForeground(RED);
+            for (Component c : sidebar.getComponents()) {
+                if (c instanceof JButton) {
+                    JButton b = (JButton) c;
+                    boolean on = SIDE_ON.equals(b.getBackground());
 
-    // Apply sidebar colors
-    if (sidebar != null) {
-        sidebar.setBackground(SIDE);
+                    b.setOpaque(true);
+                    b.setContentAreaFilled(true);
+                    b.setBackground(on ? SIDE_ON : SIDE);
+                    b.setForeground(Color.WHITE);
 
-        for (java.awt.Component c : sidebar.getComponents()) {
-            if (c instanceof JButton) {
-                JButton b = (JButton) c;
-                boolean on = SIDE_ON.equals(b.getBackground());
-
-                b.setOpaque(true);
-                b.setContentAreaFilled(true);
-                b.setBackground(on ? SIDE_ON : SIDE);
-                b.setForeground(Color.WHITE);
-
-            } else if (c instanceof JLabel) {
-                ((JLabel) c).setForeground(Color.WHITE);
+                } else if (c instanceof JLabel) {
+                    ((JLabel) c).setForeground(Color.WHITE);
+                }
             }
         }
+
+        repaint();
     }
 
-    repaint();
-}
-
     /** Force readable colors on every component. The look-and-feel ignores setForeground unless we also set opaque. */
-    private void applyTheme(java.awt.Component root, Color oldBg, Color oldCard) {
+    private void applyTheme(Component root, Color oldBg, Color oldCard) {
         if (root == null) return;
 
         Color fieldBg = darkMode ? new Color(50, 54, 62) : Color.WHITE;
         Color fieldFg = darkMode ? new Color(240, 242, 245) : new Color(28, 32, 40);
-        Color btnBg = darkMode ? new Color(70, 74, 84) : new Color(230, 232, 236);
+        Color btnBg = darkMode ? new Color(70, 74, 84) : new Color(240, 243, 248);
 
         if (root instanceof JPanel) {
             JPanel panel = (JPanel) root;
@@ -2529,7 +2636,7 @@ public class FinancialTracker extends JFrame {
                 label.setOpaque(false);
             }
         } else if (root instanceof JTextField || root instanceof JTextArea || root instanceof JPasswordField) {
-            javax.swing.text.JTextComponent tc = (javax.swing.text.JTextComponent) root;
+            JTextComponent tc = (JTextComponent) root;
             tc.setOpaque(true);
             tc.setBackground(fieldBg);
             tc.setForeground(fieldFg);
@@ -2552,11 +2659,12 @@ public class FinancialTracker extends JFrame {
             table.setGridColor(BORDER);
             table.setSelectionBackground(darkMode ? new Color(80, 90, 120) : new Color(200, 215, 240));
             table.setSelectionForeground(fieldFg);
-            // Force a renderer so the look-and-feel cannot paint dark text
-            table.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
-                public java.awt.Component getTableCellRendererComponent(JTable t, Object value,
+            table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+                private static final long serialVersionUID = 1L;
+
+                public Component getTableCellRendererComponent(JTable t, Object value,
                         boolean isSelected, boolean hasFocus, int row, int column) {
-                    java.awt.Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+                    Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
                     if (isSelected) {
                         c.setBackground(darkMode ? new Color(80, 90, 120) : new Color(200, 215, 240));
                         c.setForeground(fieldFg);
@@ -2598,11 +2706,11 @@ public class FinancialTracker extends JFrame {
             JScrollPane scroll = (JScrollPane) root;
             scroll.getViewport().setBackground(CARD);
             scroll.getViewport().setOpaque(true);
-            scroll.setBorder(new LineBorder(BORDER, 1));
+            scroll.setBorder(new RoundedBorder(BORDER, 10));
         }
 
-        if (root instanceof java.awt.Container) {
-            for (java.awt.Component child : ((java.awt.Container) root).getComponents()) {
+        if (root instanceof Container) {
+            for (Component child : ((Container) root).getComponents()) {
                 applyTheme(child, oldBg, oldCard);
             }
         }
@@ -2630,7 +2738,6 @@ public class FinancialTracker extends JFrame {
         }
     }
 
-
     // ------------------------------------------------------------------
     // Reports tab (the graph)
     // ------------------------------------------------------------------
@@ -2639,9 +2746,9 @@ public class FinancialTracker extends JFrame {
 - Two simple bar charts built from Swing panels.
      */
     private JPanel createReportsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
         panel.setBackground(BG);
-        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
+        panel.setBorder(new EmptyBorder(16, 18, 16, 18));
 
         categoryBarsPanel = new JPanel();
         categoryBarsPanel.setBackground(CARD);
@@ -2651,41 +2758,48 @@ public class FinancialTracker extends JFrame {
         dailyBarsPanel.setBackground(CARD);
         dailyBarsPanel.setLayout(new BoxLayout(dailyBarsPanel, BoxLayout.Y_AXIS));
 
-        JPanel charts = new JPanel(new GridLayout(1, 2, 12, 0));
+        JPanel charts = new JPanel(new GridLayout(1, 2, 14, 0));
         charts.setOpaque(false);
         charts.add(createChartCard("Spending per category", categoryBarsPanel));
         charts.add(createChartCard("Spending per day (selected month)", dailyBarsPanel));
 
+        JPanel summaryCard = createCardContainer(8, 14);
+        summaryCard.setLayout(new BorderLayout());
         reportSummaryLabel = new JLabel(" ");
         reportSummaryLabel.setFont(LABEL_FONT);
         reportSummaryLabel.setForeground(MUTED);
-        reportSummaryLabel.setBorder(new EmptyBorder(4, 4, 0, 4));
+        summaryCard.add(reportSummaryLabel, BorderLayout.CENTER);
 
+        JPanel toolbarCard = createCardContainer(10, 14);
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         toolbar.setOpaque(false);
         reportMonthBox = new JComboBox<String>();
+        reportMonthBox.setPreferredSize(new Dimension(115, 30));
         reportMonthBox.addActionListener(e -> {
             if (!fillingReportMonths) rebuildReports();
         });
         JButton exportButton = new JButton("Export CSV...");
+        styleModernButton(exportButton, true);
         exportButton.addActionListener(e -> exportReport());
         toolbar.add(smallLabel("REPORT MONTH"));
         toolbar.add(reportMonthBox);
         toolbar.add(exportButton);
-        panel.add(toolbar, BorderLayout.NORTH);
+        toolbarCard.setLayout(new BorderLayout());
+        toolbarCard.add(toolbar, BorderLayout.WEST);
+
+        panel.add(toolbarCard, BorderLayout.NORTH);
         panel.add(charts, BorderLayout.CENTER);
-        panel.add(reportSummaryLabel, BorderLayout.SOUTH);
+        panel.add(summaryCard, BorderLayout.SOUTH);
         return panel;
     }
 
     /** A white card with a title and a column of bars inside. */
     private JPanel createChartCard(String title, JPanel bars) {
-        JPanel card = new JPanel(new BorderLayout(0, 10));
-        card.setBackground(CARD);
-        card.setBorder(new EmptyBorder(14, 16, 14, 16));
+        JPanel card = createCardContainer(14, 16);
+        card.setLayout(new BorderLayout(0, 10));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(BOLD_FONT);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         titleLabel.setForeground(INK);
 
         card.add(titleLabel, BorderLayout.NORTH);
@@ -2868,24 +2982,4 @@ public class FinancialTracker extends JFrame {
         }
         return list;
     }
-
-    // ------------------------------------------------------------------
-    // The data classes (simple boxes that hold data)
-    // ------------------------------------------------------------------
-
-    /** All four dashboard cards use this single, consistent month calculation. */
-
-    /** A dated income or transfer into savings. The history is independent of goal names. */
-
-    /**
-- ArrayLists, HashMaps and the undo Stack remain the working data structures.
-- A single UTF-8 text snapshot per user is saved after every modification.
-- No database, external library or Java object serialization is needed.
-     */
-
-    /** One expense row. */
-
-    /** One savings goal. */
-
-    /** One user account for the login window. */
 }
