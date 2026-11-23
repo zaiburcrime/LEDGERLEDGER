@@ -104,18 +104,18 @@ public class FinancialTracker extends JFrame {
 
     // Dark colors are the default so the window opens like the sample dashboard.
     // Light mode swaps these in toggleDarkMode().
-    private static Color BG = new Color(24, 24, 28);
-    private static Color CARD = new Color(36, 36, 42);
-    private static Color INK = new Color(236, 238, 242);
-    private static Color MUTED = new Color(176, 180, 192);
+    private static Color BG = new Color(232, 236, 242);
+    private static Color CARD = Color.WHITE;
+    private static Color INK = new Color(28, 32, 40);
+    private static Color MUTED = new Color(70, 80, 95);
     private static final Color ACCENT = new Color(124, 92, 255);
     private static final Color GREEN = new Color(52, 199, 89);
     private static final Color RED = new Color(255, 99, 99);
     private static final Color BLUE = new Color(120, 170, 255);
     private static final Color SIDE = new Color(108, 78, 214);
     private static final Color SIDE_ON = new Color(88, 62, 190);
-    private boolean darkMode = true;
-    private static Color BORDER = new Color(58, 58, 68);
+    private boolean darkMode = false;
+    private static Color BORDER = new Color(190, 198, 210);
 
     // SansSerif is on every school PC. Helvetica is not.
     private static final Font TITLE_FONT = new Font("SansSerif", Font.BOLD, 20);
@@ -559,13 +559,6 @@ public class FinancialTracker extends JFrame {
         userLabel.setFont(LABEL_FONT);
         userLabel.setForeground(MUTED);
 
-        JCheckBox darkModeCheck = new JCheckBox("Dark mode");
-        darkModeCheck.setFont(LABEL_FONT);
-        darkModeCheck.setOpaque(false);
-        darkModeCheck.setForeground(INK);
-        darkModeCheck.setSelected(darkMode);
-        darkModeCheck.addActionListener(e -> toggleDarkMode(darkModeCheck));
-
         JButton logoutButton = new JButton("Log out");
         logoutButton.setFont(LABEL_FONT);
         logoutButton.setFocusPainted(false);
@@ -576,7 +569,6 @@ public class FinancialTracker extends JFrame {
         });
 
         right.add(userLabel);
-        right.add(darkModeCheck);
         right.add(logoutButton);
 
         header.add(left, BorderLayout.WEST);
@@ -2327,49 +2319,42 @@ public class FinancialTracker extends JFrame {
         JOptionPane.showMessageDialog(this, message, "Please check", JOptionPane.WARNING_MESSAGE);
     }
 
-    private void toggleDarkMode(JCheckBox check) {
-        Color oldBg = BG;
-        Color oldCard = CARD;
-        darkMode = check.isSelected();
-        if (darkMode) {
-            BG = new Color(24, 24, 28);
-            CARD = new Color(36, 36, 42);
-            INK = new Color(236, 238, 242);
-            MUTED = new Color(176, 180, 192);
-            BORDER = new Color(58, 58, 68);
-        } else {
-            BG = new Color(232, 236, 242);
-            CARD = Color.WHITE;
-            INK = new Color(28, 32, 40);
-            MUTED = new Color(70, 80, 95);
-            BORDER = new Color(190, 198, 210);
-        }
-        // Do not call updateComponentTreeUI. That resets colors back to the look-and-feel.
-        applyTheme(this, oldBg, oldCard);
-        paintSidebar();
-        contentPane.setBackground(BG);
-        refreshAll();
-        if (allowanceValueLabel != null) allowanceValueLabel.setForeground(ACCENT);
-        if (spentValueLabel != null) spentValueLabel.setForeground(RED);
-        repaint();
-    }
-
     private void paintSidebar() {
-        if (sidebar == null) return;
+
+    // Apply the main theme
+
+    contentPane.setBackground(BG);
+
+    refreshAll();
+
+    if (allowanceValueLabel != null)
+        allowanceValueLabel.setForeground(ACCENT);
+
+    if (spentValueLabel != null)
+        spentValueLabel.setForeground(RED);
+
+    // Apply sidebar colors
+    if (sidebar != null) {
         sidebar.setBackground(SIDE);
+
         for (java.awt.Component c : sidebar.getComponents()) {
             if (c instanceof JButton) {
                 JButton b = (JButton) c;
                 boolean on = SIDE_ON.equals(b.getBackground());
+
                 b.setOpaque(true);
                 b.setContentAreaFilled(true);
                 b.setBackground(on ? SIDE_ON : SIDE);
                 b.setForeground(Color.WHITE);
+
             } else if (c instanceof JLabel) {
                 ((JLabel) c).setForeground(Color.WHITE);
             }
         }
     }
+
+    repaint();
+}
 
     /** Force readable colors on every component. The look-and-feel ignores setForeground unless we also set opaque. */
     private void applyTheme(java.awt.Component root, Color oldBg, Color oldCard) {
