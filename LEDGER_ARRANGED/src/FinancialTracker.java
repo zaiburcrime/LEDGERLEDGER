@@ -1101,7 +1101,6 @@ public class FinancialTracker extends JFrame {
         goalInfoLabel.setFont(SMALL_FONT);
         goalInfoLabel.setForeground(MUTED);
 
-        toolbar.add(smallLabel("ADD MONEY"));
         toolbar.add(depositField);
         toolbar.add(depositButton);
         JButton clearDepositButton = new JButton("Clear amount");
@@ -1970,6 +1969,63 @@ public class FinancialTracker extends JFrame {
         allowanceMessageLabel.setText(saved ? "Allowance reset." : "Not yet saved to disk.");
     }
 
+    private double totalPlannedExcluding(String excludedCategory) {
+        double total = 0;
+        for (Map.Entry<String, Double> entry : planned().entrySet()) {
+            if (!entry.getKey().equals(excludedCategory) && entry.getValue() != null) {
+                total = LedgerData.cents(total + entry.getValue().doubleValue());
+            }
+        }
+        return total;
+    }
+
+    private void enforceBudgetCap() {
+        YearMonth month = YearMonth.now();
+        double totalBudget = LedgerData.cents(data.allowance(month) + data.extraIncome(month));
+        HashMap<String, Double> monthPlan = planned();
+
+        if (totalBudget <= 0) {
+            if (!monthPlan.isEmpty()) {
+                monthPlan.clear();
+                showError("Not enough remaining budget: total monthly budget is ₱0.00, so existing planned amounts were cleared.");
+            }
+            return;
+        }
+
+        double totalPlanned = 0;
+        for (String category : categories) {
+            Double val = monthPlan.get(category);
+            if (val != null && val > 0) {
+                totalPlanned = LedgerData.cents(totalPlanned + val.doubleValue());
+            }
+        }
+
+        double excess = LedgerData.cents(totalPlanned - totalBudget);
+        if (excess <= 0) {
+            return;
+        }
+
+        double trimmed = excess;
+        for (int i = categories.size() - 1; i >= 0 && excess > 0; i--) {
+            String category = categories.get(i);
+            Double val = monthPlan.get(category);
+            if (val == null || val <= 0) {
+                continue;
+            }
+            double current = val.doubleValue();
+            if (current <= excess) {
+                monthPlan.remove(category);
+                excess = LedgerData.cents(excess - current);
+            } else {
+                monthPlan.put(category, Double.valueOf(LedgerData.cents(current - excess)));
+                excess = 0;
+            }
+        }
+
+        showError("Not enough remaining budget: planned amounts were reduced by ₱" + MONEY.format(trimmed)
+                + " to fit your ₱" + MONEY.format(totalBudget) + " total monthly budget.");
+    }
+
     private void savePlanForCategory() {
         String category = (String) planCategoryBox.getSelectedItem();
         if (category == null) {
@@ -1982,9 +2038,22 @@ public class FinancialTracker extends JFrame {
             return;
         }
 
+        YearMonth month = YearMonth.now();
+        double totalBudget = LedgerData.cents(data.allowance(month) + data.extraIncome(month));
+        double usedByOthers = totalPlannedExcluding(category);
+        double remainingBudget = LedgerData.cents(totalBudget - usedByOthers);
+
+        if (amount > remainingBudget + 0.000001) {
+            showError("Not enough remaining budget.\n"
+                    + "Total monthly budget: ₱" + MONEY.format(totalBudget) + "\n"
+                    + "Already planned in other categories: ₱" + MONEY.format(usedByOthers) + "\n"
+                    + "Remaining budget available: ₱" + MONEY.format(Math.max(0, remainingBudget)));
+            return;
+        }
+
         // HashMap put: if the key is already there, the value is replaced.
         planned().put(category, Double.valueOf(amount));
-        dashboardMonth = YearMonth.now();
+        dashboardMonth = month;
         planAmountField.setText("");
         rebuildPlanTable();
         changed();
@@ -2054,6 +2123,7 @@ public class FinancialTracker extends JFrame {
         updateDashboardMonths();
         refreshDashboard();
         rebuildGoalTable();
+        enforceBudgetCap();
         rebuildPlanTable();
         updateReportMonths();
         rebuildReports();
