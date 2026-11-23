@@ -1101,7 +1101,6 @@ public class FinancialTracker extends JFrame {
         goalInfoLabel.setFont(SMALL_FONT);
         goalInfoLabel.setForeground(MUTED);
 
-        toolbar.add(smallLabel("ADD MONEY"));
         toolbar.add(depositField);
         toolbar.add(depositButton);
         JButton clearDepositButton = new JButton("Clear amount");
