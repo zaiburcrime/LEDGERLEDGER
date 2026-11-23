@@ -1073,7 +1073,7 @@ public class FinancialTracker extends JFrame {
         depositField.setPreferredSize(new Dimension(110, 28));
         depositField.setFont(LABEL_FONT);
 
-        JButton depositButton = new JButton("Add money");
+        JButton depositButton = new JButton("Add Savings");
         depositButton.setFont(LABEL_FONT);
         depositButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
